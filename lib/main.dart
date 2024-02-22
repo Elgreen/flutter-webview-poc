@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:async';
 import 'dart:math';
 
-const web_app_url = 'https://venerable-bienenstitch-6073af.netlify.app/';
+const String web_app_url = 'https://venerable-bienenstitch-6073af.netlify.app/';
 
 void main() async {
   runApp(const MyApp());
@@ -116,7 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title + " xxc"),
+        title: Text("${widget.title} xxc"),
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
