@@ -2,6 +2,10 @@
 
 Proof of concept for data exchange between Flutter and web app inside webview.
 
+Will work only on android and ios because the `webview_flutter` package is not supported on desktop.
+
+Flutter app opens a webview and sends data to the web app using `WebViewController.runJavaScript()`.
+
 ## Getting Started
 
 ### Web app
