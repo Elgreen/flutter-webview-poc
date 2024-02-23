@@ -2,7 +2,7 @@
 
 Proof of concept for data exchange between Flutter and web app inside webview.
 
-![Screenshot_20240223_141900.png](docs%2FScreenshot_20240223_141900.png)
+![Screenshot_20240223_141900.png](docs%2FScreenshot_20240223_141900.png | width=300)
 
 ## Flutter app
 
