@@ -182,13 +182,13 @@ class _MyHomePageState extends State<MyHomePage> {
           ButtonBar(
             alignment: MainAxisAlignment.center,
             children: <Widget>[
-              ElevatedButton(
+              ElevatedButton( // open default url
                 child: const Icon(Icons.star),
                 onPressed: () {
                   _navigateToUrl(defaultWebAppUrl);
                 },
               ),
-              ElevatedButton(
+              ElevatedButton( // open url bar
                 child: const Icon(Icons.open_in_browser),
                 // set button visually pressed if showUrlBar is true
                 style: ButtonStyle(
@@ -204,14 +204,14 @@ class _MyHomePageState extends State<MyHomePage> {
                   //_navigateToUrl(defaultWebAppUrl);
                 },
               ),
-              ElevatedButton(
+              ElevatedButton( // reload webview
                 child: const Icon(Icons.refresh),
                 onPressed: () {
                   webViewController?.reload();
                   _clearWebViewData();
                 },
               ),
-              ElevatedButton(
+              ElevatedButton( // send data to webview
                 child: const Icon(Icons.send),
                 onPressed: () {
                   _sendCurrentData();
