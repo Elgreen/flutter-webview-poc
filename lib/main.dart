@@ -72,6 +72,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   String currentUrl = defaultWebAppUrl;
   String dataFromWeb = noData;
+  bool showUrlBar = false;
   final GlobalKey webViewKey = GlobalKey();
   InAppWebViewController? webViewController;
   InAppWebViewSettings settings = InAppWebViewSettings(
@@ -108,10 +109,9 @@ class _MyHomePageState extends State<MyHomePage> {
     await webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
     _clearWebViewData();
   }
-  bool showUrl = true;
   _toggleUrl() {
     setState(() {
-      showUrl = !showUrl;
+      showUrlBar = !showUrlBar;
     });
   }
 
@@ -166,9 +166,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           Text('Received from webview:'),
           Text(dataFromWeb),
+          Divider(),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: !showUrl ? Container() : TextField(
+            child: !showUrlBar ? Container() : TextField(
               decoration: const InputDecoration(prefixIcon: Icon(Icons.navigate_next)),
               keyboardType: TextInputType.url,
               controller: TextEditingController()..text = currentUrl,
@@ -189,6 +190,15 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ElevatedButton(
                 child: const Icon(Icons.open_in_browser),
+                // set button visually pressed if showUrlBar is true
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+                    if (showUrlBar) {
+                      return Theme.of(context).colorScheme.primary.withOpacity(0.00001);
+                    }
+                    return Theme.of(context).colorScheme.background;
+                  }),
+                ),
                 onPressed: () {
                   _toggleUrl();
                   //_navigateToUrl(defaultWebAppUrl);
