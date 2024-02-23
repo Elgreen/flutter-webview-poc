@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:math';
 
-const String defaultWebAppUrl = 'https://venerable-bienenstitch-6073af.netlify.app/';
+const String defaultWebAppUrl = 'https://elgreen.github.io/flutter-webview-poc/';
 const String noData = 'No data';
 
 void main() async {
