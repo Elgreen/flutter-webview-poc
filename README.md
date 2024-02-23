@@ -8,9 +8,9 @@ Proof of concept for data exchange between Flutter and web app inside webview.
 
 ### Web app to Flutter communication
 
-The web app can send data to the Flutter app using the `window.flutter_inappwebview.callHandler()` method.
-
 In web app:
+
+The web app can send data to the Flutter app using the `window.flutter_inappwebview.callHandler()` method.
 ```javascript
 function sendMessageToFlutter(message) {
     window.flutter_inappwebview.callHandler('flutterApp', message).then(function(result) {
@@ -19,9 +19,10 @@ function sendMessageToFlutter(message) {
 }
 ```
 
+In flutter app:
+
 Flutter listens for messages from the web app using the `WebViewController.addJavaScriptHandler()` method.
 
-In flutter app:
 ```dart
 InAppWebView(
   ...
@@ -40,18 +41,20 @@ The Flutter app is a simple app with a button that sends a message to the web ap
 
 It uses the `flutter_inappwebview` package to display the web app.
 
+In flutter app:
+
 Flutter can send data to the web app using the `WebViewController.evaluateJavascript()` method.
 
-In flutter app:
 ```dart
 void _sendData(String data) async {
   await webViewController?.evaluateJavascript(source: "receiveMessageFromFlutter('$data');");
 }
 ```
 
+In web app:
+
 it calls the `receiveMessageFromFlutter` function in the web app with the data as an argument.
 
-In web app:
 ```javascript
 function receiveMessageFromFlutter(message) {
     currentTime = new Date().toLocaleTimeString();
