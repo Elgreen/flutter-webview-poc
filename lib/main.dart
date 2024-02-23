@@ -1,18 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:math';
 
-const String web_app_url = 'https://venerable-bienenstitch-6073af.netlify.app/';
+const String defaultWebAppUrl = 'https://venerable-bienenstitch-6073af.netlify.app/';
+const String noData = 'No data';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const MyApp());
 }
 
 class DataProducer {
-  static double getValue()
-  {
+  static double getValue() {
     var seconds = DateTime.now().microsecond + DateTime.now().second * 1000;
-    return  100 * sin((seconds / 60000.0 * pi));
+    return 100 * sin((seconds / 60000.0 * pi));
   }
 }
 
@@ -23,7 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter <--> Webview Demo',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -43,7 +46,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Flutter <--> Webview Demo'),
     );
   }
 }
@@ -67,34 +70,49 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  var controller = WebViewController()
-    ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    ..setBackgroundColor(const Color(0x00000000))
-    ..setNavigationDelegate(
-      NavigationDelegate(
-        onProgress: (int progress) {
-          // Update loading bar.
-        },
-        onPageStarted: (String url) {},
-        onPageFinished: (String url) {},
-        onWebResourceError: (WebResourceError error) {},
-        onNavigationRequest: (NavigationRequest request) {
-          if (request.url.startsWith('https://www.youtube.com/')) {
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        },
-      ),
-    )
-    ..loadRequest(Uri.parse('https://venerable-bienenstitch-6073af.netlify.app/'));
+  String currentUrl = defaultWebAppUrl;
+  String dataFromWeb = noData;
+  final GlobalKey webViewKey = GlobalKey();
+  InAppWebViewController? webViewController;
+  InAppWebViewSettings settings = InAppWebViewSettings(
+      isInspectable: kDebugMode,
+      mediaPlaybackRequiresUserGesture: false,
+      allowsInlineMediaPlayback: true,
+      javaScriptEnabled: true,
+      iframeAllowFullscreen: false);
 
   void _sendCurrentData() {
-    _sendData(DataProducer.getValue());
+    _sendData(DataProducer.getValue().toString());
   }
 
-  void _sendData(data)
-  {
-    controller.runJavaScript("setResponse('$data');");
+  void _sendData(String data) async {
+    await webViewController?.evaluateJavascript(source: "receiveMessageFromFlutter('$data');");
+  }
+
+  void _recieveData(String data) async {
+    setState(() {
+      dataFromWeb = '$data on ${DateTime.now().toString()}';
+    });
+  }
+
+  void _clearWebViewData() {
+    setState(() {
+      dataFromWeb = noData;
+    });
+  }
+
+  void _navigateToUrl(String url) async {
+    setState(() {
+      currentUrl = url;
+    });
+    await webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+    _clearWebViewData();
+  }
+  bool showUrl = true;
+  _toggleUrl() {
+    setState(() {
+      showUrl = !showUrl;
+    });
   }
 
   @override
@@ -113,38 +131,86 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text("${widget.title} xxc"),
+        title: Text("${widget.title}"),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Expanded( // Wrap the WebViewWidget with an Expanded widget
-              child: WebViewWidget(controller: controller),
+      body: SafeArea(
+        child: Column(children: <Widget>[
+          Expanded(
+            child: Stack(
+              children: [
+                InAppWebView(
+                  key: webViewKey,
+                  initialUrlRequest: URLRequest(url: WebUri(defaultWebAppUrl)),
+                  initialSettings: settings,
+                  onWebViewCreated: (controller) {
+                    webViewController = controller;
+                    // register a JavaScript handler with name "flutterApp"
+                    controller.addJavaScriptHandler(
+                        handlerName: 'flutterApp',
+                        callback: (args) {
+
+                          _recieveData(args[0]);
+
+                          // return data to the JavaScript side!
+                          return 'hello from flutter';
+                        });
+                  },
+                  onConsoleMessage: (controller, consoleMessage) {
+                    if (kDebugMode) {
+                      print(consoleMessage);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Text('Received from webview:'),
+          Text(dataFromWeb),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: !showUrl ? Container() : TextField(
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.navigate_next)),
+              keyboardType: TextInputType.url,
+              controller: TextEditingController()..text = currentUrl,
+              onSubmitted: (value) {
+                _navigateToUrl(value);
+                _toggleUrl();
+              },
+            ),
+          ),
+          ButtonBar(
+            alignment: MainAxisAlignment.center,
+            children: <Widget>[
+              ElevatedButton(
+                child: const Icon(Icons.star),
+                onPressed: () {
+                  _navigateToUrl(defaultWebAppUrl);
+                },
               ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _sendCurrentData,
-        tooltip: 'Send data',
-        child: const Icon(Icons.send),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+              ElevatedButton(
+                child: const Icon(Icons.open_in_browser),
+                onPressed: () {
+                  _toggleUrl();
+                  //_navigateToUrl(defaultWebAppUrl);
+                },
+              ),
+              ElevatedButton(
+                child: const Icon(Icons.refresh),
+                onPressed: () {
+                  webViewController?.reload();
+                  _clearWebViewData();
+                },
+              ),
+              ElevatedButton(
+                child: const Icon(Icons.send),
+                onPressed: () {
+                  _sendCurrentData();
+                },
+              ),
+            ],
+          ),
+        ]),
+      ),// This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
