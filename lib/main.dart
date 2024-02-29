@@ -1,3 +1,4 @@
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -44,7 +45,7 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter <--> Webview Demo'),
@@ -73,7 +74,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   String currentUrl = defaultWebAppUrl;
   String dataFromWeb = noData;
-  bool showUrlBar = false;
+  bool showUrlBar = true;
+  bool showSettings = false;
   final GlobalKey webViewKey = GlobalKey();
   InAppWebViewController? webViewController;
   InAppWebViewSettings settings = InAppWebViewSettings(
@@ -116,6 +118,13 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+
+  _toggleSettings() {
+    setState(() {
+      showSettings = !showSettings;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -125,15 +134,18 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text("${widget.title}"),
-      ),
+      // appBar: AppBar(
+      //   // TRY THIS: Try changing the color here to a specific color (to
+      //   // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+      //   // change color while the other colors stay the same.
+      //   backgroundColor: Theme
+      //       .of(context)
+      //       .colorScheme
+      //       .inversePrimary,
+      //   // Here we take the value from the MyHomePage object that was created by
+      //   // the App.build method, and use it to set our appbar title.
+      //   title: Text("${widget.title}"),
+      // ),
       body: SafeArea(
         child: Column(children: <Widget>[
           Expanded(
@@ -149,7 +161,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     controller.addJavaScriptHandler(
                         handlerName: 'flutterApp',
                         callback: (args) {
-
                           _recieveData(args[0]);
 
                           // return data to the JavaScript side!
@@ -165,63 +176,91 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
           ),
-          Text('Received from webview:'),
-          Text(dataFromWeb),
-          Divider(),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: !showUrlBar ? Container() : TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.navigate_next)),
-              keyboardType: TextInputType.url,
-              controller: TextEditingController()..text = currentUrl,
-              onSubmitted: (value) {
-                _navigateToUrl(value);
-                _toggleUrl();
-              },
-            ),
-          ),
-          ButtonBar(
-            alignment: MainAxisAlignment.center,
-            children: <Widget>[
-              ElevatedButton( // open default url
-                child: const Icon(Icons.star),
-                onPressed: () {
-                  _navigateToUrl(defaultWebAppUrl);
-                },
-              ),
-              ElevatedButton( // open url bar
-                child: const Icon(Icons.open_in_browser),
-                // set button visually pressed if showUrlBar is true
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
-                    if (showUrlBar) {
-                      return Theme.of(context).colorScheme.primary.withOpacity(0.00001);
-                    }
-                    return Theme.of(context).colorScheme.background;
-                  }),
+          !showSettings ? const SizedBox(width: 0, height: 0) : Column(children: <Widget>[
+                const Text('Received from webview:'),
+                Text(dataFromWeb),
+                //Divider(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: !showUrlBar ? Container() : TextField(
+                    decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.navigate_next)),
+                    keyboardType: TextInputType.url,
+                    controller: TextEditingController()
+                      ..text = currentUrl,
+                    onSubmitted: (value) {
+                      _navigateToUrl(value);
+                      _toggleUrl();
+                    },
+                  ),
                 ),
-                onPressed: () {
-                  _toggleUrl();
-                  //_navigateToUrl(defaultWebAppUrl);
-                },
-              ),
-              ElevatedButton( // reload webview
-                child: const Icon(Icons.refresh),
-                onPressed: () {
-                  webViewController?.reload();
-                  _clearWebViewData();
-                },
-              ),
-              ElevatedButton( // send data to webview
-                child: const Icon(Icons.send),
-                onPressed: () {
-                  _sendCurrentData();
-                },
-              ),
-            ],
-          ),
+                ButtonBar(
+                  alignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ElevatedButton( // open default url
+                      child: const Icon(Icons.star),
+                      onPressed: () {
+                        _navigateToUrl(defaultWebAppUrl);
+                      },
+                    ),
+                    ElevatedButton( // open url bar
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.resolveWith<
+                            Color>((states) {
+                          if (showUrlBar) {
+                            return Theme
+                                .of(context)
+                                .colorScheme
+                                .inversePrimary;
+                          }
+                          return Theme
+                              .of(context)
+                              .colorScheme
+                              .background;
+                        }),
+                      ),
+                      onPressed: () {
+                        _toggleUrl();
+                        //_navigateToUrl(defaultWebAppUrl);
+                      }, // open url bar
+                      child: const Icon(Icons.open_in_browser),
+                    ),
+                    ElevatedButton( // reload webview
+                      child: const Icon(Icons.refresh),
+                      onPressed: () {
+                        webViewController?.reload();
+                        _clearWebViewData();
+                      },
+                    ),
+                    ElevatedButton( // send data to webview
+                      child: const Icon(Icons.send),
+                      onPressed: () {
+                        _sendCurrentData();
+                      },
+                    ),
+                  ],
+                ),
+              ]),
+
+
         ]),
-      ),// This trailing comma makes auto-formatting nicer for build methods.
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _toggleSettings();
+        },
+        tooltip: 'Show settings',
+
+        backgroundColor: showSettings ? Theme
+            .of(context)
+            .colorScheme
+            .inversePrimary
+        : Theme
+            .of(context)
+            .colorScheme
+            .background,
+        child: const Icon(Icons.settings),
+      ),
     );
   }
 }
