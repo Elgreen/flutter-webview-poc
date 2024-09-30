@@ -4,7 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+
 import 'data_producer.dart';
+import 'widgets/action_buttons.dart';
+import 'widgets/scales_data.dart';
+import 'widgets/url_input.dart';
+import 'widgets/webview_data.dart';
 
 const String defaultWebAppUrl = 'https://elgreen.github.io/flutter-webview-poc/';
 const String noData = 'No data';
@@ -36,10 +41,10 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    connectToServerInBackground();
+    _connectToServerInBackground();
   }
 
-  Future<void> connectToServerInBackground() async {
+  Future<void> _connectToServerInBackground() async {
     const String serverAddress = '127.0.0.1';
     const int port = 10001;
 
@@ -55,9 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
         print('Получено сообщение');
         String base64String = base64Encode(data);
         print('Base64: $base64String');
-        print(receivedMessage);
+        String weight = _extractWeight(receivedMessage);
+        print(weight);
         setState(() {
-          serverResponse = receivedMessage;
+          serverResponse = weight;
         });
 
         socket.write('!');
@@ -83,12 +89,14 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  String extractWeight(String message) {
-    int weightStartIndex = message.contains('+') ? message.indexOf('+') : message.indexOf('-');
+  String _extractWeight(String message) {
+    int weightStartIndex =
+        message.contains('+') ? message.indexOf('+') : message.indexOf('-');
     int weightEndIndex = message.indexOf('kg');
 
     if (weightStartIndex != -1 && weightEndIndex != -1) {
-      String weight = message.substring(weightStartIndex, weightEndIndex).trim();
+      String weight =
+          message.substring(weightStartIndex, weightEndIndex).trim();
       return weight;
     } else {
       return "Не удалось извлечь вес";
@@ -124,13 +132,13 @@ class _MyHomePageState extends State<MyHomePage> {
     _clearWebViewData();
   }
 
-  _toggleUrl() {
+  void _toggleUrl() {
     setState(() {
       showUrlBar = !showUrlBar;
     });
   }
 
-  _toggleSettings() {
+  void _toggleSettings() {
     setState(() {
       showSettings = !showSettings;
     });
@@ -166,80 +174,32 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
           ),
-          !showSettings
-              ? const SizedBox(width: 0, height: 0)
-              : Column(children: <Widget>[
-                  const Text('Received from scales:'),
-                  Text(serverResponse),
-                  const Divider(),
-                  const Text('Received from webview:'),
-                  Text(dataFromWeb),
-                  const Divider(),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: !showUrlBar
-                        ? Container()
-                        : TextField(
-                            decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.navigate_next)),
-                            keyboardType: TextInputType.url,
-                            controller: TextEditingController()
-                              ..text = currentUrl,
-                            onSubmitted: (value) {
-                              _navigateToUrl(value);
-                              _toggleUrl();
-                            },
-                          ),
-                  ),
-                  OverflowBar(
-                    alignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      ElevatedButton(
-                        child: const Icon(Icons.star),
-                        onPressed: () {
-                          _navigateToUrl(defaultWebAppUrl);
-                        },
-                      ),
-                      ElevatedButton(
-                        style: ButtonStyle(
-                          backgroundColor:
-                              WidgetStateProperty.resolveWith<Color>(
-                                  (states) {
-                            if (showUrlBar) {
-                              return Theme.of(context)
-                                  .colorScheme
-                                  .inversePrimary;
-                            }
-                            return Theme.of(context).colorScheme.surface;
-                          }),
-                        ),
-                        onPressed: () {
-                          _toggleUrl();
-                        },
-                        child: const Icon(Icons.open_in_browser),
-                      ),
-                      ElevatedButton(
-                        child: const Icon(Icons.refresh),
-                        onPressed: () {
-                          webViewController?.reload();
-                          _clearWebViewData();
-                        },
-                      ),
-                      ElevatedButton(
-                        child: const Icon(Icons.send),
-                        onPressed: () {
-                          _sendCurrentData();
-                        },
-                      ),
-                    ],
-                  ),
-                ]),
+          if (showSettings) ...[
+            ScalesData(serverResponse: serverResponse),
+            WebViewData(dataFromWeb: dataFromWeb),
+            UrlInput(
+              showUrlBar: showUrlBar,
+              currentUrl: currentUrl,
+              onSubmitted: (value) {
+                _navigateToUrl(value);
+                _toggleUrl();
+              },
+            ),
+            ActionButtons(
+              showUrlBar: showUrlBar,
+              navigateToDefaultUrl: () => _navigateToUrl(defaultWebAppUrl),
+              toggleUrl: _toggleUrl,
+              reloadWebView: () {
+                webViewController?.reload();
+                _clearWebViewData();
+              },
+              sendCurrentData: _sendCurrentData,
+            ),
+          ],
         ]),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _toggleSettings();
-        },
+        onPressed: _toggleSettings,
         tooltip: 'Show settings',
         backgroundColor: showSettings
             ? Theme.of(context).colorScheme.inversePrimary
