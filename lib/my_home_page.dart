@@ -1,9 +1,7 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_web/services/scales/mera_connection_service.dart';
 
 import 'data_producer.dart';
 import 'widgets/action_buttons.dart';
@@ -41,67 +39,32 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _connectToServerInBackground();
+    _connectToScales();
   }
 
-  Future<void> _connectToServerInBackground() async {
-    const String serverAddress = '127.0.0.1';
-    const int port = 10001;
-
-    try {
-      Socket socket = await Socket.connect(serverAddress, port);
-      print('Подключено к серверу: $serverAddress:$port');
-      setState(() {
-        serverResponse = 'Подключено к серверу: $serverAddress:$port';
-      });
-
-      socket.listen((List<int> data) {
-        String receivedMessage = ascii.decode(data);
-        print('Получено сообщение');
-        String base64String = base64Encode(data);
-        print('Base64: $base64String');
-        String weight = _extractWeight(receivedMessage);
-        print(weight);
+  void _connectToScales() {
+    MeraConnectionService(
+      serverAddress: '127.0.0.1',
+      port: 10001,
+      onMessageReceived: (message) {
         setState(() {
-          serverResponse = weight;
+          serverResponse = message;
         });
-
-        socket.write('!');
-        print('Подтверждение отправлено: !');
-      }, onError: (error) {
-        print("Ошибка: $error");
+      },
+      onError: (error) {
         setState(() {
-          serverResponse = "Ошибка подключения: $error";
+          serverResponse = error;
         });
-        socket.destroy();
-      }, onDone: () {
-        print("Соединение закрыто");
+      },
+      onDone: () {
         setState(() {
-          serverResponse = "Соединение закрыто сервером";
+          serverResponse = "Connection closed by server";
         });
-        socket.destroy();
-      });
-    } catch (e) {
-      print("Ошибка: $e");
-      setState(() {
-        serverResponse = "Ошибка подключения: $e";
-      });
-    }
+      },
+    ).connectToServerInBackground();
   }
 
-  String _extractWeight(String message) {
-    int weightStartIndex =
-        message.contains('+') ? message.indexOf('+') : message.indexOf('-');
-    int weightEndIndex = message.indexOf('kg');
 
-    if (weightStartIndex != -1 && weightEndIndex != -1) {
-      String weight =
-          message.substring(weightStartIndex, weightEndIndex).trim();
-      return weight;
-    } else {
-      return "Не удалось извлечь вес";
-    }
-  }
 
   void _sendCurrentData() {
     _sendData(DataProducer.getValue().toString());
