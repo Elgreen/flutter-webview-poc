@@ -1,10 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:math';
 
-const String defaultWebAppUrl = 'https://elgreen.github.io/flutter-webview-poc/';
+const String defaultWebAppUrl =
+    'https://elgreen.github.io/flutter-webview-poc/';
 const String noData = 'No data';
 
 void main() async {
@@ -30,21 +33,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter <--> Webview Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
         useMaterial3: true,
       ),
@@ -55,15 +43,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -84,13 +63,91 @@ class _MyHomePageState extends State<MyHomePage> {
       allowsInlineMediaPlayback: true,
       javaScriptEnabled: true,
       iframeAllowFullscreen: false);
+  String serverResponse = "Ожидание данных...";
+
+  @override
+  void initState() {
+    super.initState();
+    connectToServerInBackground();
+  }
+
+  // Метод для подключения к серверу и получения данных в фоне
+  Future<void> connectToServerInBackground() async {
+    const String serverAddress = '127.0.0.1'; // IP-адрес сервера
+    // const String serverAddress = 'accounting.keenetic.pro'; // IP-адрес сервера
+
+    // const int port = 1001; // Wifi
+    // const int port = 1011; // Ethernet
+    const int port = 10001; // Ethernet
+
+    try {
+      // Подключаемся к серверу
+      Socket socket = await Socket.connect(serverAddress, port);
+      print('Подключено к серверу: $serverAddress:$port');
+      setState(() {
+        serverResponse = 'Подключено к серверу: $serverAddress:$port';
+      });
+
+      // Слушаем поток данных в бесконечном режиме
+      socket.listen((List<int> data) {
+        String receivedMessage = ascii.decode(data);
+        print('Получено сообщение');
+
+        // Извлекаем вес из полученного сообщения
+        // receivedMessage = extractWeight(receivedMessage);
+        String base64String = base64Encode(data);
+        print('Base64: $base64String');
+        print(receivedMessage);
+        setState(() {
+          serverResponse = receivedMessage;
+        });
+
+        // Отправляем подтверждение "!"
+        socket.write('!');
+        print('Подтверждение отправлено: !');
+      }, onError: (error) {
+        print("Ошибка: $error");
+        setState(() {
+          serverResponse = "Ошибка подключения: $error";
+        });
+        socket.destroy();
+      }, onDone: () {
+        print("Соединение закрыто");
+        setState(() {
+          serverResponse = "Соединение закрыто сервером";
+        });
+        socket.destroy();
+      });
+    } catch (e) {
+      print("Ошибка: $e");
+      setState(() {
+        serverResponse = "Ошибка подключения: $e";
+      });
+    }
+  }
+
+  // Функция для извлечения веса из полученного сообщения
+  String extractWeight(String message) {
+    // Ищем позицию знака массы (+ или -) и ключевое слово "kg"
+    int weightStartIndex = message.contains('+') ? message.indexOf('+') : message.indexOf('-');
+    int weightEndIndex = message.indexOf('kg');
+
+    if (weightStartIndex != -1 && weightEndIndex != -1) {
+      // Извлекаем подстроку с весом
+      String weight = message.substring(weightStartIndex, weightEndIndex).trim();
+      return weight;
+    } else {
+      return "Не удалось извлечь вес";
+    }
+  }
 
   void _sendCurrentData() {
     _sendData(DataProducer.getValue().toString());
   }
 
   void _sendData(String data) async {
-    await webViewController?.evaluateJavascript(source: "receiveMessageFromFlutter('$data');");
+    await webViewController?.evaluateJavascript(
+        source: "receiveMessageFromFlutter('$data');");
   }
 
   void _recieveData(String data) async {
@@ -112,12 +169,12 @@ class _MyHomePageState extends State<MyHomePage> {
     await webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
     _clearWebViewData();
   }
+
   _toggleUrl() {
     setState(() {
       showUrlBar = !showUrlBar;
     });
   }
-
 
   _toggleSettings() {
     setState(() {
@@ -134,18 +191,6 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      // appBar: AppBar(
-      //   // TRY THIS: Try changing the color here to a specific color (to
-      //   // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-      //   // change color while the other colors stay the same.
-      //   backgroundColor: Theme
-      //       .of(context)
-      //       .colorScheme
-      //       .inversePrimary,
-      //   // Here we take the value from the MyHomePage object that was created by
-      //   // the App.build method, and use it to set our appbar title.
-      //   title: Text("${widget.title}"),
-      // ),
       body: SafeArea(
         child: Column(children: <Widget>[
           Expanded(
@@ -176,73 +221,79 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
           ),
-          !showSettings ? const SizedBox(width: 0, height: 0) : Column(children: <Widget>[
-                const Text('Received from webview:'),
-                Text(dataFromWeb),
-                //Divider(),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: !showUrlBar ? Container() : TextField(
-                    decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.navigate_next)),
-                    keyboardType: TextInputType.url,
-                    controller: TextEditingController()
-                      ..text = currentUrl,
-                    onSubmitted: (value) {
-                      _navigateToUrl(value);
-                      _toggleUrl();
-                    },
+          !showSettings
+              ? const SizedBox(width: 0, height: 0)
+              : Column(children: <Widget>[
+                  const Text('Received from scales:'),
+                  Text(serverResponse),
+                  const Divider(),
+                  const Text('Received from webview:'),
+                  Text(dataFromWeb),
+                  const Divider(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: !showUrlBar
+                        ? Container()
+                        : TextField(
+                            decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.navigate_next)),
+                            keyboardType: TextInputType.url,
+                            controller: TextEditingController()
+                              ..text = currentUrl,
+                            onSubmitted: (value) {
+                              _navigateToUrl(value);
+                              _toggleUrl();
+                            },
+                          ),
                   ),
-                ),
-                ButtonBar(
-                  alignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    ElevatedButton( // open default url
-                      child: const Icon(Icons.star),
-                      onPressed: () {
-                        _navigateToUrl(defaultWebAppUrl);
-                      },
-                    ),
-                    ElevatedButton( // open url bar
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.resolveWith<
-                            Color>((states) {
-                          if (showUrlBar) {
-                            return Theme
-                                .of(context)
-                                .colorScheme
-                                .inversePrimary;
-                          }
-                          return Theme
-                              .of(context)
-                              .colorScheme
-                              .background;
-                        }),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      ElevatedButton(
+                        // open default url
+                        child: const Icon(Icons.star),
+                        onPressed: () {
+                          _navigateToUrl(defaultWebAppUrl);
+                        },
                       ),
-                      onPressed: () {
-                        _toggleUrl();
-                        //_navigateToUrl(defaultWebAppUrl);
-                      }, // open url bar
-                      child: const Icon(Icons.open_in_browser),
-                    ),
-                    ElevatedButton( // reload webview
-                      child: const Icon(Icons.refresh),
-                      onPressed: () {
-                        webViewController?.reload();
-                        _clearWebViewData();
-                      },
-                    ),
-                    ElevatedButton( // send data to webview
-                      child: const Icon(Icons.send),
-                      onPressed: () {
-                        _sendCurrentData();
-                      },
-                    ),
-                  ],
-                ),
-              ]),
-
-
+                      ElevatedButton(
+                        // open url bar
+                        style: ButtonStyle(
+                          backgroundColor:
+                              WidgetStateProperty.resolveWith<Color>(
+                                  (states) {
+                            if (showUrlBar) {
+                              return Theme.of(context)
+                                  .colorScheme
+                                  .inversePrimary;
+                            }
+                            return Theme.of(context).colorScheme.surface;
+                          }),
+                        ),
+                        onPressed: () {
+                          _toggleUrl();
+                          //_navigateToUrl(defaultWebAppUrl);
+                        }, // open url bar
+                        child: const Icon(Icons.open_in_browser),
+                      ),
+                      ElevatedButton(
+                        // reload webview
+                        child: const Icon(Icons.refresh),
+                        onPressed: () {
+                          webViewController?.reload();
+                          _clearWebViewData();
+                        },
+                      ),
+                      ElevatedButton(
+                        // send data to webview
+                        child: const Icon(Icons.send),
+                        onPressed: () {
+                          _sendCurrentData();
+                        },
+                      ),
+                    ],
+                  ),
+                ]),
         ]),
       ),
       floatingActionButton: FloatingActionButton(
@@ -250,15 +301,9 @@ class _MyHomePageState extends State<MyHomePage> {
           _toggleSettings();
         },
         tooltip: 'Show settings',
-
-        backgroundColor: showSettings ? Theme
-            .of(context)
-            .colorScheme
-            .inversePrimary
-        : Theme
-            .of(context)
-            .colorScheme
-            .background,
+        backgroundColor: showSettings
+            ? Theme.of(context).colorScheme.inversePrimary
+            : Theme.of(context).colorScheme.surface,
         child: const Icon(Icons.settings),
       ),
     );
